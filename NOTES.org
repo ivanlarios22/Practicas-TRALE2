@@ -19,8 +19,139 @@ digit -> 0 | 1 | 2 | 3 | 4 | ... | 9
 Examples:
 - "2 + 2"
 
+** From infix to posfix
 
-** From infix to posfix 
+For example
+- "2 + 2" -> " 2 2 +"
+- "2 * 2" -> " 2 2 *"
+
+#+BEGIN_SRC
+  
+#+END_SRC
+
+
+Example code:
+#+BEGIN_SRC python
+  # Lexer: A simple class to pass from the stream of chars to tokens
+  class Lexer:
+      def _init_(self, input_string):
+          self.input_string = input_string 
+          self.tokens = []  # List of tokens
+          self.tokenize()   # Tokenize input
+
+      def tokenize(self):
+          """ Convert input string into a list of tokens """
+          s = self.input_string
+          i = 0
+          while i < len(s):
+              ch = s[i]
+              if ch.isdigit():
+                  self.tokens.append(('DIGIT', ch))
+              elif ch == '+':
+                  self.tokens.append(('PLUS', '+'))
+              elif ch == '-':
+                  self.tokens.append(('SUB', '-'))
+              elif ch == '*':
+                  self.tokens.append(('MUL', '*'))
+              elif ch == '/':
+                  self.tokens.append(('DIV', '/'))
+              elif ch.isspace():
+                  i += 1
+                  continue
+              else:
+                  raise ValueError(f"Unknown char: {ch}") 
+              i += 1
+              
+          self.tokens.append(('EOF', 'EOF'))
+
+      def get_tokens(self):
+          return self.tokens
+
+
+  # Parser: Converts infix expression to postfix using precedence
+  class Parser:
+      PRECEDENCE = {'+': 1, '-': 1, '*': 2, '/': 2, ''}  # Define operator precedence
+
+      def _init_(self, tokens):
+          self.tokens = tokens
+          self.position = 0
+          self.current_token = None
+          self.postfix_expression = []  # List to store postfix notation
+          self.operator_stack = []  # Stack to manage operators
+          self.next_token()
+
+      def next_token(self):
+          """ Move to the next token """
+          if self.position < len(self.tokens):
+              self.current_token = self.tokens[self.position]
+              self.position += 1
+          else:
+              self.current_token = ('EOF', 'EOF')
+
+      def parse(self):
+          """ Start parsing and return postfix expression """
+          self.parse_expression()
+          while self.operator_stack:
+              self.postfix_expression.append(self.operator_stack.pop())  # Empty remaining operators
+          if self.current_token[0] != 'EOF':
+              raise SyntaxError("Invalid input.")
+          return self.postfix_expression
+
+      def parse_expression(self):
+          """ Parses an expression considering operator precedence """
+          self.parse_term()  # Parse first term
+          while self.current_token[0] in ('PLUS', 'SUB'):
+              self.handle_operator(self.current_token[1])
+              self.next_token()
+              self.parse_term()
+
+      def parse_term(self):
+          """ Parses a term considering multiplication and division """
+          self.parse_digit()
+          while self.current_token[0] in ('MUL', 'DIV'):
+              self.handle_operator(self.current_token[1])
+              self.next_token()
+              self.parse_digit()
+
+      def parse_digit(self):
+          """ Parses a single digit """
+          if self.current_token[0] == 'DIGIT':
+              self.postfix_expression.append(self.current_token[1])  # Append number to postfix
+              self.next_token()
+          else:
+              raise SyntaxError(f"Expected digit, found: {self.current_token}")
+
+      def handle_operator(self, operator):
+          """ Manages operator precedence using a stack """
+          while (self.operator_stack and 
+                 self.operator_stack[-1] in self.PRECEDENCE and 
+                 self.PRECEDENCE[self.operator_stack[-1]] >= self.PRECEDENCE[operator]):
+              self.postfix_expression.append(self.operator_stack.pop())
+          self.operator_stack.append(operator)
+
+
+  def main():
+      test_string = "2+8*5-2/2"
+
+      try:
+          # Get the stream of tokens
+          lexer = Lexer(test_string)
+          tokens = lexer.get_tokens()
+
+          # Parse the tokens and convert to postfix
+          parser = Parser(tokens)
+          postfix = parser.parse()
+
+          print("Postfix Notation:", " ".join(postfix))
+
+      except SyntaxError as e:
+          print("Syntax Error:", e)
+      except ValueError as e:
+          print("Value Error:", e)
+
+  if _name_ == "_main_":
+      main()
+#+END_SRC
 
 
 
