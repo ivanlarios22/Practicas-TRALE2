@@ -1,0 +1,32 @@
+* Main Grammar
+So the main grammar is this one.
+#+BEGIN_SRC
+expr -> term
+      | + term
+      | - term
+  
+term -> factor
+      | * factor
+      | / factor
+  
+factor -> digit
+        | ( expr )
+  
+digit -> 0 | 1 | 2 | 3 | 4 | ... | 9
+#+END_SRC
+
+
+Examples:
+- "2 + 2"
+
+
+** From infix to posfix 
+
+
+
+
+
+
+
+
+
