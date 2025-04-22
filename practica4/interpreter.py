@@ -1,4 +1,4 @@
-""" New Grammar:
+""" Grammar:
 
 ;; Now our grammar could have multiple statements
 program -> stmt | program
@@ -19,12 +19,8 @@ term -> factor
 factor -> digit
         | ( expr )
         | id
-digit -> [1-9] | digit | digit-zero
-digit-zero -> [0-9] | digit | nill
-
-id -> alpha alpha-numeric | id
-alpha -> [A-Z] | [a-z] | alpha
-alpha-numeric -> alpha | alpha-numeric | '_' | [0-9] | nill
+digit -> [0-9] | digit
+id -> [A-Z] | [a-z] | id
 
 """
 
