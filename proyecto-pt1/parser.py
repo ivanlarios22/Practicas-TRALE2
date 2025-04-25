@@ -5,7 +5,10 @@ stmt -> assig-stmt
       | print-stmt
       | if-else-stmt
       | while-stmt
-assig-stmt -> id '=' expr
+      | declare-stmt
+declare-stmt -> dtype id
+assig-stmt -> dtype id '=' expr | id '=' expr
+dtype -> 'int' | 'real' | 'bool'
 print-stmt -> 'print' expr
 if-else-stmt -> 'if' expr stmts 'endif'
              | 'if' expr stmts else-stmt
@@ -41,20 +44,40 @@ bool -> 'True' | 'False'
 # For debugging
 import pdb
 
+# To fetch the arguments in the command line
+import sys
+
 # SymbolTable: Where we are going to store the id's or symbols
 class SymbolTable:
+    """
+    '<val-name>' -> (val, dtype)
+    """
     def __init__(self):
         self.table = {}
     
-    def set(self, name, value):
-        self.table[name] = value
+    def set(self, name, value = None):
+        # If there is not value, then just register the name
+        if value is not None:
+            self.table[name] = (value, type(value))
+        else:
+            self.table[name] = (None, None)
+        
+    def set_type(self, name, dtype : type):
+        """Sets the value as None"""
+        self.table[name] = (None, dtype)
 
     def exist(self, name):
         return name in self.table
     
     def get(self, name):
         try:
-            return self.table[name]
+            return self.table[name][0]
+        except KeyError:
+            raise NameError(f"Variable {name} is not defined")
+
+    def get_type(self, name):
+        try:
+            return self.table[name][1]
         except KeyError:
             raise NameError(f"Variable {name} is not defined")
 
@@ -101,6 +124,9 @@ class Lexer:
 
     
     # Data
+    INTEGER = ('INTEGER', 'int')
+    REAL = ('REAL', 'real')
+    BOOLEAN = ('BOOLEAN', 'bool')
     TRUE = ('TRUE', True)
     FALSE = ('FALSE', False)
     # Format for the numbers
@@ -117,6 +143,9 @@ class Lexer:
         PRINT[1] : PRINT,
         TRUE[1] : TRUE,
         FALSE[1] : FALSE,
+        INTEGER[1] : INTEGER,
+        REAL[1] : REAL,
+        BOOLEAN[1] : BOOLEAN,
     }
     
     
@@ -166,7 +195,7 @@ class Lexer:
             return
         
         # Allocate the symbol with the value 'None'
-        self.table.set(word, None)
+        self.table.set(word)
         self.tokens.append(('ID', word))
         
     def tokenize(self):
@@ -294,8 +323,20 @@ class Parser:
         """ Detects if there are more tokens """
         return self.position < len(self.tokens)
 
-    def match(self, token : (str, str)) -> bool:
+    def get_dtype(self, token) -> type:
+        """Based in the token we return the class object type"""
+        if self.match(token, Lexer.INTEGER):
+            return int
+        elif self.match(token, Lexer.REAL):
+            return float
+        elif self.match(token, Lexer.BOOLEAN):
+            return bool
+        raise SyntaxError("Uknow data type")
+            
+    def match(self, token : (str, str), token_2 : (str, str) = None) -> bool:
         """ Matches the current token with a given """
+        if token_2 is not None:
+            return token[0] == token_2[0] and token[1] == token_2[1]
         return self.current_token[0] == token[0] and self.current_token[1] == token[1]
 
     def parse(self):
@@ -354,8 +395,24 @@ class Parser:
             if not self.match(Lexer.END):
                 raise SyntaxError("Expect 'end' for a while loop")
             self.next_token()
-        elif self.current_token[0] == 'ID':
+        elif self.match(Lexer.INTEGER) \
+             or self.match(Lexer.REAL) \
+             or self.match(Lexer.BOOLEAN):
+            dtype = self.get_dtype(self.current_token)
+            self.next_token()
             variable = self.table.get(self.current_token[1])
+            if self.table.get_type(self.current_token[1]) is not None:
+                raise SyntaxError(f"Re defining the data type of variable: {self.current_token[1]}")
+            self.table.set_type(self.current_token[1], dtype)
+            self.next_token()
+            if self.match(Lexer.ASSIGN):
+                self.next_token()
+                self.expr()
+        elif self.current_token[0] == "ID":
+            variable = self.table.get(self.current_token[1])
+            dtype = self.table.get_type(self.current_token[1])
+            if dtype is None:
+                raise SyntaxError(f"Variable doesn't have a datatype defined {self.current_token[1]}")
             self.next_token()
             if not self.match(Lexer.ASSIGN):
                 raise SyntaxError("Expect '=' for assiging things")
@@ -458,53 +515,66 @@ class Parser:
         else:
             raise SyntaxError(f"Expect to have a digit '0, 1, 2, ..., 9' or '(' with a new expression, but found '{self.current_token[1]}'")
 
+
+def get_content(filename: str):
+    """Get the content from the file"""
+    try:
+        with open(filename, "r") as f:
+            return  f.read()
+    except FileNotFoundError as e:
+        print(f"Error! The file was not found: {e}")
+
 def main():
     # A usage example
-    
+
     # program = "  2 * ( 2 / ( 1 + 1))"
     # program = """
     # begin
     #    a = 1 + 2
     #    if a == 3
     #      print a
-    #    end 
+    #    end
     # end
     # """
-    program = """
-    begin
-        a = 0
-        while a < 10
-            a = a + 1
-            if a == 5
-                print a
-            end 
-        end
-    end
+    # program = """
+    # begin
+    #     a = 0
+    #     while a < 10
+    #         a = a + 1
+    #         if a == 5
+    #             print a
+    #         end
+    #     end
+    # end
+    # """
+
+    script_name = sys.argv[0]
+    arguments = sys.argv[1:]
+    if len(arguments) != 1:
+        raise TypeError(f"This script requires at one argument. "
+                        f"Usage: python {script_name} <argument1>")
+
+    # Get the program
+    program = get_content(arguments[0])
+
+    table = SymbolTable()
     """
-    
-    
-    try:
-        table = SymbolTable()
-        """
         tokens:  [('NUMBER', 2), ('PLUS', '+'), ('NUMBER', 2), ('MUL', '*'), ('LPAREN', '('), ('NUMBER', 2), ('DIV', '/'), ('NUMBER', 2), ('RPAREN', ')'), ('EOF', 'EOF')]
         """
-        # Get the stream of tokens
-        lexer = Lexer(program, table)
-        tokens = lexer.get_tokens()
-        print("tokens: ", tokens)
-        
-        print(table)
-        # pdb.set_trace()
-        
-        # Parse the tokens
-        parser = Parser(tokens, table)
-        parser.parse()
-        
-        print(f"Stream of chars '{program}' accepted by the grammar.")
-    except SyntaxError as e:
-        print("Syntax Error:", e)
-    except ValueError as e:
-        print("Value Error:", e)
+    # Get the stream of tokens
+    lexer = Lexer(program, table)
+    tokens = lexer.get_tokens()
+    # print("tokens: ", tokens)
+
+    # print(table)
+    # pdb.set_trace()
+
+    # Parse the tokens
+    parser = Parser(tokens, table)
+    parser.parse()
+
+    print("Accepted by the grammar.")
+
 
         
 if __name__ == "__main__":
