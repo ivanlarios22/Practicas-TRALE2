@@ -38,6 +38,9 @@ id -> [A-Z] | [a-z] | id
 bool -> 'True' | 'False'
 """
 
+# For debugging
+import pdb
+
 # SymbolTable: Where we are going to store the id's or symbols
 class SymbolTable:
     def __init__(self):
@@ -54,6 +57,16 @@ class SymbolTable:
             return self.table[name]
         except KeyError:
             raise NameError(f"Variable {name} is not defined")
+
+    # To print the symbol table
+    def __str__(self) -> str:
+        s = "{"
+        for key, val in self.table.items():
+            s += f"{key}: {val}, "
+        s += "}"
+        return s
+
+    
 
 # Lexer: A simple class to pass from the stream of chars to tokens
 class Lexer:
@@ -333,12 +346,14 @@ class Parser:
                 self.stmts()
             if not self.match(Lexer.END):
                 raise SyntaxError("Expect 'end' for a if statement")
+            self.next_token()
         elif self.match(Lexer.WHILE):
             self.next_token()
             self.expr()
             self.stmts()
             if not self.match(Lexer.END):
                 raise SyntaxError("Expect 'end' for a while loop")
+            self.next_token()
         elif self.current_token[0] == 'ID':
             variable = self.table.get(self.current_token[1])
             self.next_token()
@@ -436,8 +451,9 @@ class Parser:
             self.next_token()
         elif self.current_token[0] == "ID":
             variable = self.table.get(self.current_token[1])
-            if variable is None:
-                raise SyntaxError(f"Variable {self.current_token[1]} is not defined")
+            # Do something with the variable 
+            # if variable is None:
+            #     raise SyntaxError(f"Variable {self.current_token[1]} is not defined")
             self.next_token()
         else:
             raise SyntaxError(f"Expect to have a digit '0, 1, 2, ..., 9' or '(' with a new expression, but found '{self.current_token[1]}'")
@@ -446,14 +462,26 @@ def main():
     # A usage example
     
     # program = "  2 * ( 2 / ( 1 + 1))"
+    # program = """
+    # begin
+    #    a = 1 + 2
+    #    if a == 3
+    #      print a
+    #    end 
+    # end
+    # """
     program = """
     begin
-       a = 1 + 2
-       if a == 3
-         print a
-       end 
+        a = 0
+        while a < 10
+            a = a + 1
+            if a == 5
+                print a
+            end 
+        end
     end
     """
+    
     
     try:
         table = SymbolTable()
@@ -464,7 +492,10 @@ def main():
         lexer = Lexer(program, table)
         tokens = lexer.get_tokens()
         print("tokens: ", tokens)
-
+        
+        print(table)
+        # pdb.set_trace()
+        
         # Parse the tokens
         parser = Parser(tokens, table)
         parser.parse()
