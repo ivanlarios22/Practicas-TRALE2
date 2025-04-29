@@ -9,19 +9,23 @@ stmt -> assigment
 assigment -> id '=' expr
 print-stmt -> 'print' '(' expr ')'
 expr -> term
-      | + term
-      | - term
+      | term + term
+      | term - term
   
 term -> factor
-      | * factor
-      | / factor
-  
-factor -> digit
-        | ( expr )
-        | id
+      | factor * factor
+      | factor / factor
+
+factor -> digit | - digit
+        | ( expr ) | - ( expr )
+        | id | - id
+        | base ^ exponent
+
+base -> ( expr ) | digit
+exponent -> ( expr ) | digit
+
 digit -> [0-9] | digit
 id -> [A-Z] | [a-z] | id
-
 """
 
 # SymbolTable: Where we are going to store the id's or symbols
@@ -49,6 +53,7 @@ class Lexer:
     SUB = ('SUB', '-')
     MUL = ('MUL', '*')
     DIV = ('DIV', '/')
+    POW = ('POW', '^')
     LPAREN = ('LPAREN', '(')
     RPAREN = ('RPAREN', ')')
     ASSIGN = ('ASSIGN', '=')
@@ -134,6 +139,8 @@ class Lexer:
                 self.tokens.append(Lexer.RPAREN)
             elif ch == '=':
                 self.tokens.append(Lexer.ASSIGN)
+            elif ch == '^':
+                self.tokens.append(Lexer.POW)
             elif ch.isspace():
                 # Is it is just space, like tabs or spaces just ignore
                 pass
@@ -266,12 +273,18 @@ class Parser:
     
     def factor(self) -> float:
         """
-        factor -> digit
-                | ( expr )
-                | id
+        factor -> digit | - digit
+                | ( expr ) | - ( expr )
+                | id | - id
+                | base ^ exponent | - base ^ exponent
         """
-
         factor = None
+        negative = False
+        if self.match(Lexer.SUB):
+            negative = True
+            self.next_token()
+
+            
         if self.match(Lexer.LPAREN):
             # Do something here ...
             
@@ -293,6 +306,25 @@ class Parser:
             self.next_token()
         else:
             raise SyntaxError(f"Expect to have an integer number '[0-9]' or '(' with a new expression, but found '{self.current_token[1]}'")
+
+        if self.match(Lexer.POW):
+            self.next_token()
+            exponent = None
+            if self.match(Lexer.LPAREN):
+                self.next_token()
+                exponent = self.expr()
+                if not self.match(Lexer.RPAREN):
+                    raise SyntaxError(f"Expect to have ')' after having '(', but found {self.current_token[1]}")
+                self.next_token()
+            elif self.current_token[0] == "NUMBER":
+                exponent = float(self.current_token[1])
+                self.next_token()
+            else:
+                raise SyntaxError("Expected to have an exponent to be a number or an '( expr )'")
+            factor = factor ** exponent
+        
+        if negative:
+            return - factor
         return factor
 
 def main():
@@ -314,9 +346,18 @@ def main():
     # z = x + y
     # print(z)
     # """
+    # test_string = """
+    # print((2 + 1) / 2)
+    # """
+    # Example program computing the chicharronera
     test_string = """
-    print((2 + 1) / 2)
+    a = 2
+    b = 3
+    c = - 6
+    print((- b - ((b ^ 2 - 4 * a * c) ^ (1 / 2))) / (2 * a))
+    print((- b + ((b ^ 2 - 4 * a * c) ^ (1 / 2))) / (2 * a))
     """
+    
     
     try:
         # Create the Symbol Table
@@ -325,7 +366,7 @@ def main():
         # Get the stream of tokens
         lexer = Lexer(test_string, table)
         tokens = lexer.get_tokens()
-        print("tokens: ", tokens)
+        # print("tokens: ", tokens)
 
         # Parse the tokens
         parser = Parser(tokens, table)

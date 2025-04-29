@@ -1,6 +1,7 @@
 begin
   int a
-  while a < 10
+  bool whileasdfas
+  whileasdfas a < 10
     a = a + 1
     if a == 5
       print a
