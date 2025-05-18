@@ -850,60 +850,34 @@ def get_content(filename: str):
         print(f"Error! The file was not found: {e}")
 
 def main():
-    # A usage example
-
-    # program = """
-    # begin
-    #    a = 1 + 2
-    #    if a == 3
-    #      print a
-    #    end
-    # end
-    # """
-    # program = """
-    # begin
-    #     a = 0
-    #     while a < 10
-    #         a = a + 1
-    #         if a == 5
-    #             print a
-    #         end
-    #     end
-    # end
-    # """
 
     script_name = sys.argv[0]
     arguments = sys.argv[1:]
     if len(arguments) != 1:
-        raise TypeError(f"This script requires at one argument. "
-                        f"Usage: python {script_name} <argument1>")
+        raise TypeError(f"This script requires at one argument which is the program. "
+                        f"Usage: python {script_name} <program>")
 
     # Get the program
     program = get_content(arguments[0])
 
+    # Create the table of contents
     table = SymbolTable()
-    """
-    tokens:  [('NUMBER', 2), ('PLUS', '+'), ('NUMBER', 2), ('MUL', '*'), ('LPAREN', '('), ('NUMBER', 2), ('DIV', '/'), ('NUMBER', 2), ('RPAREN', ')'), ('EOF', 'EOF')]
-    """
+    
     # Get the stream of tokens
     lexer = Lexer(program, table)
     tokens = lexer.get_tokens()
-    # print("tokens: ", tokens)
-    
-    # print(table)
-    # pdb.set_trace()
-    
-    # Parse the tokens
+
+    # Parse the tokens and get the abstract syntax tree
     parser = Parser(tokens, table)
     ast_root = parser.parse()
 
-    # pdb.set_trace()
+    # From the abstarct syntax tree generate the three address code
     gen = CodeGenerator(ast_root, table)
-    
     code = gen.generate()
+
+    # Print the code
     for line in code:
         print(line)
-
 
         
 if __name__ == "__main__":
