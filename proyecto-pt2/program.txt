@@ -1,0 +1,18 @@
+begin
+  real a = 2
+  real b = 3
+  real c = - 6
+  real res = (- b - ((b ^ 2 - 4 * a * c) ^ (1 / 2))) / (2 * a)
+  print res
+  if res == 2
+    print res + 6
+  else if res == 3
+    print res + 4
+  else
+    print res + 2
+  end
+  
+  while res > 0
+    res = res - 1
+  end
+end
